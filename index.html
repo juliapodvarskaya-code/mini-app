@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        /* Основной шрифт для всего приложения */
+        /* Подключение рукописного шрифта для фона/атмосферы, если нужно */
         @font-face {
             font-family: 'AmsterdamFour';
             src: url('amsterdam-four_ttf.ttf') format('truetype');
@@ -14,64 +14,67 @@
         
         body { 
             margin: 0; padding: 0; background: #b0b8d0; 
-            font-family: 'AmsterdamFour', cursive; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             display: flex; flex-direction: column; height: 100vh;
         }
 
         .container { position: relative; width: 100%; max-width: 500px; margin: 0 auto; flex-shrink: 0; }
         .bg-image { width: 100%; height: auto; display: block; }
         
-        /* Цифры на треугольнике */
         .number { 
             position: absolute; transform: translate(-50%, -50%); 
             font-size: 2.8vw; color: #1a1a1a; pointer-events: none; line-height: 1;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-family: sans-serif;
         }
         @media (min-width: 500px) { .number { font-size: 14px; } }
 
-        /* Контейнер с текстом */
+        /* КОНТЕНТ */
         .content { 
             flex-grow: 1; background: #ffffff; padding: 25px; 
             border-radius: 24px 24px 0 0; box-shadow: 0 -10px 25px rgba(0,0,0,0.1);
             overflow-y: auto; margin-top: -15px; z-index: 10;
-            font-family: 'Georgia', 'Times New Roman', Times, serif; /* Классический шрифт для чтения */
             line-height: 1.6;
-            color: #000000; /* Весь текст по умолчанию черный */
         }
 
-        /* Вкладки */
+        /* ВКЛАДКИ - КРАСИВЫЙ КЛАССИЧЕСКИЙ ШРИФТ */
         .tabs { display: flex; background: #fff; border-top: 1px solid #eee; padding-bottom: env(safe-area-inset-bottom); }
         .tab { 
-            flex: 1; padding: 18px 5px; text-align: center; font-size: 12px; 
+            flex: 1; padding: 18px 5px; text-align: center; font-size: 14px; 
             color: #aaa; cursor: pointer; text-transform: uppercase; 
-            /* Классический красивый шрифт для вкладок */
-            font-family: 'Georgia', 'Times New Roman', serif; 
+            /* Стиль "Vogue" - Didot, Bodoni, или старая классика */
+            font-family: 'Didot', 'Bodoni MT', 'Times New Roman', serif;
             letter-spacing: 1px;
         }
-        .tab.active { color: #248bcf; font-weight: bold; border-top: 2px solid #248bcf; }
+        .tab.active { 
+            color: #248bcf; 
+            font-weight: bold; 
+            border-top: 3px solid #248bcf; 
+        }
 
-        /* Стили для трактовок */
-        .interp-block { margin-bottom: 25px; }
+        /* --- СТИЛИ ТРАКТОВОК --- */
+        .interp-block { margin-bottom: 35px; }
         
-        /* Заголовок (Позиция и Аркан) - СИНИЙ */
+        /* ЗАГОЛОВОК: Аркан + Название. СИНИЙ (#248bcf). ШРИФТ КЛАССИЧЕСКИЙ */
         .interp-header {
             color: #248bcf;
+            font-family: 'Didot', 'Bodoni MT', 'Times New Roman', serif;
             font-weight: bold;
-            font-size: 18px;
-            margin-bottom: 8px;
-            font-family: 'Georgia', 'Times New Roman', serif;
+            font-size: 22px;
+            margin-bottom: 12px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
         }
 
-        /* Описание - ЧЕРНОЕ */
+        /* ТЕКСТ: СТРОГО ЧЕРНЫЙ. ОБЫЧНЫЙ ЧИТАБЕЛЬНЫЙ ШРИФТ */
         .interp-body {
-            color: #000000;
-            font-size: 15px;
+            color: #000000 !important;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-size: 15px;
         }
 
-        /* Жирный текст внутри описания - ЧЕРНЫЙ (перебиваем синий цвет) */
+        /* Жирный текст внутри описания - СТРОГО ЧЕРНЫЙ */
         .interp-body b, .interp-body strong {
-            color: #000000;
+            color: #000000 !important;
             font-weight: 700;
         }
 
@@ -87,26 +90,25 @@
 
 <div class="content">
     <div id="error-log"></div>
-    <div id="text-content">Загрузка трактовок...</div>
+    <div id="text-content">Загрузка...</div>
 </div>
 
 <div class="tabs">
-    <div class="tab active" onclick="switchTab('inner', this)">ВНУТРЕННИЙ</div>
-    <div class="tab" onclick="switchTab('outer', this)">ВНЕШНИЙ</div>
-    <div class="tab" onclick="switchTab('contact', this)">ОКРУЖЕНИЕ</div>
+    <div class="tab active" onclick="switchTab('inner', this)">Внутренний</div>
+    <div class="tab" onclick="switchTab('outer', this)">Внешний</div>
+    <div class="tab" onclick="switchTab('contact', this)">Окружение</div>
 </div>
 
 <script>
     const tg = window.Telegram.WebApp;
     if(tg) tg.expand();
 
-    // ✅ ТВОИ КЛЮЧИ СОХРАНЕНЫ:
+    // ✅ ТВОИ КЛЮЧИ (НЕ МЕНЯЛ, КАК ТЫ ПРОСИЛА):
     const SUPABASE_URL = 'https://cfxywxzrihguvcokacgw.supabase.co'; 
     const SUPABASE_KEY = 'sb_publishable_qWwvrriEOPMUdgfjdOnmOA__U2RrkRU';
 
     let myData = { values: {}, texts: { inner: "", outer: "", contact: "" } };
 
-    // Показываем ошибки на экране, если что-то пойдет не так
     function showError(msg) {
         const el = document.getElementById('error-log');
         el.style.display = 'block';
@@ -136,7 +138,7 @@
             }
         }
 
-        // 2. Скачиваем базу (с сортировкой, чтобы позиции шли по порядку)
+        // 2. Скачиваем базу (сортируем по позиции)
         try {
             const response = await fetch(`${SUPABASE_URL}/rest/v1/portret_interpretations?select=*&order=position_number.asc`, {
                 headers: { 
@@ -145,7 +147,7 @@
                 }
             });
             
-            if (!response.ok) throw new Error(`Ошибка доступа к базе: ${response.status}`);
+            if (!response.ok) throw new Error(`Ошибка базы: ${response.status}`);
             
             const allTexts = await response.json();
             
@@ -154,7 +156,7 @@
                 return;
             }
 
-            // 3. Сопоставляем цифры и раскладываем по папкам
+            // 3. Собираем текст
             let foundCount = 0;
             allTexts.forEach(row => {
                 const dbPos = Number(row.position_number);
@@ -165,27 +167,30 @@
                 if (userArc === dbArc) {
                     const desc = row.description ? row.description.replace(/\\n/g, '<br>').replace(/\n/g, '<br>') : "";
                     
-                    // ФОРМИРУЕМ КРАСИВЫЙ БЛОК
-                    // Заголовок: синий, без слова "Позиция", только цифра и название
+                    // ФОРМИРУЕМ БЛОК
+                    // Заголовок: ТОЛЬКО АРКАН И НАЗВАНИЕ (без слова "Позиция")
+                    // Например: "9. Отшельник"
                     const html = `
                         <div class="interp-block">
-                            <div class="interp-header">${dbPos}. ${row.title}</div>
+                            <div class="interp-header">${dbArc}. ${row.title}</div>
                             <div class="interp-body">${desc}</div>
                         </div>
                     `;
                     
+                    // Логика распределения по вкладкам
                     if (dbPos <= 6) myData.texts.inner += html;
-                    else if (dbPos <= 10) myData.texts.outer += html; // Включает 7, 8, 9, 10
-                    else if (dbPos <= 15) myData.texts.contact += html; // Включает 11, 12, 13, 14, 15
+                    else if (dbPos <= 10) myData.texts.outer += html; // Сюда попадают 7, 8, 9, 10
+                    else if (dbPos <= 15) myData.texts.contact += html; // Сюда попадают 11, 12, 13, 14, 15
+                    
                     foundCount++;
                 }
             });
 
             if (foundCount > 0) switchTab('inner', document.querySelector('.tab.active'));
-            else document.getElementById('text-content').innerHTML = "Трактовки не найдены для этих цифр.";
+            else document.getElementById('text-content').innerHTML = "Трактовки не найдены для этих цифр. Проверьте заполнение базы.";
 
         } catch (err) {
-            showError("Не удалось загрузить данные. " + err.message);
+            showError("Ошибка: " + err.message);
         }
     }
 
@@ -194,7 +199,6 @@
         el.classList.add('active');
         const text = myData.texts[type];
         document.getElementById('text-content').innerHTML = text ? text : "Нет данных для этого раздела.";
-        // Прокрутка вверх при переключении вкладки
         document.querySelector('.content').scrollTop = 0;
     }
 
