@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        /* Подключаем твой шрифт */
         @font-face {
             font-family: 'AmsterdamFour';
             src: url('amsterdam-four_ttf.ttf') format('truetype');
@@ -38,7 +37,6 @@
             display: block; 
         }
 
-        /* Тот самый маленький размер цифр (2.8vw) */
         .number { 
             position: absolute; 
             transform: translate(-50%, -50%); 
@@ -61,6 +59,7 @@
             margin-top: -15px;
             z-index: 10;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            line-height: 1.6;
         }
 
         .tabs { 
@@ -83,6 +82,7 @@
             color: #248bcf; 
             font-weight: bold;
         }
+        b { color: #248bcf; }
     </style>
 </head>
 <body>
@@ -93,7 +93,7 @@
 </div>
 
 <div class="content" id="text-content">
-    Загрузка данных...
+    Загрузка портрета...
 </div>
 
 <div class="tabs">
@@ -106,50 +106,82 @@
     const tg = window.Telegram.WebApp;
     if(tg) tg.expand();
 
+    const SUPABASE_URL = 'https://cfxywxzrihguvcokacgw.supabase.co';
+    const SUPABASE_KEY = 'Sb_publishable_qWwvrriEOPMUdgfjdOnmOA__U2RrkRU';
+
     const positions = {
-        15: {x: 53.6, y: 43.8}, 
-        1:  {x: 46.0, y: 52.5}, 
-        2:  {x: 53.5, y: 52.5},
-        3:  {x: 61.0, y: 52.5}, 
-        4:  {x: 50.0, y: 59.5}, 
-        5:  {x: 57.0, y: 59.5}, 
-        6:  {x: 53.5, y: 66.5}, 
-        11: {x: 39.5, y: 56.5}, 
-        13: {x: 42.0, y: 62.0}, 
-        14: {x: 42.0, y: 66.8}, // Подняли чуточку выше (было 67.5)
-        12: {x: 47.0, y: 70.0}, 
-        7:  {x: 67.5, y: 56.5}, 
-        9:  {x: 64.5, y: 62.0}, 
-        10: {x: 64.5, y: 66.8}, // Подняли чуточку выше (было 67.5)
-        8:  {x: 60.0, y: 70.0}
+        15: {x: 53.6, y: 43.8}, 1: {x: 46.0, y: 52.5}, 2: {x: 53.5, y: 52.5},
+        3: {x: 61.0, y: 52.5}, 4: {x: 50.0, y: 59.5}, 5: {x: 57.0, y: 59.5},
+        6: {x: 53.5, y: 66.5}, 11: {x: 39.5, y: 56.5}, 13: {x: 42.0, y: 62.0},
+        14: {x: 42.0, y: 66.8}, 12: {x: 47.0, y: 70.0}, 7: {x: 67.5, y: 56.5},
+        9: {x: 64.5, y: 62.0}, 10: {x: 64.5, y: 66.8}, 8: {x: 60.0, y: 70.0}
     };
 
     let myData = {
-        values: {1:1, 2:2, 3:3, 4:4, 5:5, 6:6, 7:7, 8:8, 9:9, 10:10, 11:11, 12:12, 13:13, 14:14, 15:15},
-        texts: {
-            inner: "Описание внутренней матрицы...",
-            outer: "Описание внешних проявлений...",
-            contact: "Взаимодействие с миром..."
-        }
+        values: {},
+        texts: { inner: "", outer: "", contact: "" }
     };
 
-    function render() {
+    // Загрузка арканов из URL
+    function loadFromUrl() {
+        const params = new URLSearchParams(window.location.search);
+        for (let i = 1; i <= 15; i++) {
+            myData.values[i] = params.get(`p${i}`) || '';
+        }
+    }
+
+    // Отрисовка цифр на шаблоне
+    function renderNumbers() {
         const overlay = document.getElementById('numbers-overlay');
         overlay.innerHTML = '';
         for (const [id, pos] of Object.entries(positions)) {
             const val = myData.values[id] || '';
             overlay.innerHTML += `<div class="number" style="left:${pos.x}%; top:${pos.y}%">${val}</div>`;
         }
-        document.getElementById('text-content').innerText = myData.texts.inner;
+    }
+
+    // Загрузка трактовок из Supabase
+    async function loadInterpretations() {
+        const contentDiv = document.getElementById('text-content');
+        try {
+            const response = await fetch(`${SUPABASE_URL}/rest/v1/portret_interpretations?select=*`, {
+                headers: { 
+                    'apikey': SUPABASE_KEY, 
+                    'Authorization': `Bearer ${SUPABASE_KEY}` 
+                }
+            });
+            const allTexts = await response.json();
+
+            // Распределение по категориям согласно твоим правилам
+            allTexts.forEach(row => {
+                const pos = row.position_number;
+                const arcana = row.arcana_number;
+
+                if (myData.values[pos] == arcana) {
+                    const html = `<b>Позиция ${pos}: ${row.title}</b><br>${row.description}<br><br>`;
+                    if (pos >= 1 && pos <= 6) myData.texts.inner += html;
+                    else if (pos >= 7 && pos <= 10) myData.texts.outer += html;
+                    else if (pos >= 11 && pos <= 15) myData.texts.contact += html;
+                }
+            });
+
+            switchTab('inner', document.querySelector('.tab.active'));
+        } catch (err) {
+            contentDiv.innerHTML = "Ошибка загрузки данных. Проверьте настройки Supabase.";
+        }
     }
 
     function switchTab(type, el) {
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
         el.classList.add('active');
-        document.getElementById('text-content').innerText = myData.texts[type];
+        document.getElementById('text-content').innerHTML = myData.texts[type] || "Информация в разработке...";
     }
 
-    window.onload = render;
+    window.onload = async () => {
+        loadFromUrl();
+        renderNumbers();
+        await loadInterpretations();
+    };
 </script>
 </body>
 </html>
